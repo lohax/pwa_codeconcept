@@ -1,4 +1,4 @@
-const cacheName = 'veille-techno-1.2'
+const cacheName = 'veille-techno-1.3'
 
 self.addEventListener('install', evt => {
     console.log('install', evt)
@@ -12,10 +12,12 @@ self.addEventListener('install', evt => {
             'add_techno.js',
             'contact.html',
             'contact.js',
-            'manifest.webmanifest'
+            'manifest.webmanifest',
+            'database.js',
+            'idb.js'
         ])
-        .then(console.log('cache init'))
-        .catch(console.err)
+            .then(console.log('cache init'))
+            .catch(console.err)
     })
     evt.waitUntil(cachePromise);
 })
@@ -27,8 +29,8 @@ self.addEventListener('activate', evt => {
     console.log('activate', evt);
     let cacheCleanedPromise = caches.keys().then(keys => {
         keys.forEach(key => {
-            if(key != cacheName){
-               return caches.delete(key)
+            if (key != cacheName) {
+                return caches.delete(key)
             }
         });
     })
@@ -48,7 +50,7 @@ self.addEventListener('fetch', async (evt) => {
     //     ))
     // }
 
-    console.log('fetch', evt.request.url)
+    //console.log('fetch', evt.request.url)
 
     /**
      * * strategie de cache only with network callback
@@ -90,3 +92,90 @@ self.addEventListener('fetch', async (evt) => {
     );
 
 })
+
+/**
+* * LES NOTIFICATIONS - INTERNE
+*/
+
+// persistant notification
+// self.registration.showNotification(
+//     'Notification depuis le SW',
+//     {
+//         body: 'Je suis une notification pesistante',
+//         actions: [
+//             { action: 'accept', title: 'Accepter' },
+//             { action: 'refused', title: 'Refuser' }
+//         ]
+//     }
+// )
+
+// self.addEventListener('notificationclose', evt => {
+//     console.log('notification fermée', evt)
+// })
+
+// self.addEventListener('notificationclick', evt => {
+//     if(evt.action === 'accept') {
+//         console.log('Boutton accepter')
+//     } else if(evt.action === 'refused') {
+//         console.log('Boutton Refuser')
+//     } else {
+//         console.log('clické ailleur')
+//     }
+//     evt.notification.close();
+// })
+
+/**
+* * LES NOTIFICATIONS - EXTERNE (PUSH)
+*/
+
+self.addEventListener('push', evt => {
+    console.log('push evt', evt);
+    console.log('data envoyée : ', evt.data.text());
+    const data = evt.data.text()
+    // Lancer en reponse une notif persistante
+    evt.waitUntil(self.registration.showNotification(
+        data,
+        {
+            body: 'Je suis une notification via push',
+            image: 'images/icons/icon-152x152.png',
+            actions: [
+                { action: 'accept', title: 'Accepter' },
+                { action: 'refused', title: 'Refuser' }
+            ]
+        })
+    )
+})
+
+self.addEventListener('sync', event => {
+    if (event.tag === 'sync-technos') {
+        console.log('attempting sync', event.tag);
+        console.log('syncing', event.tag);
+        event.waitUntil(
+            getAllTechnos().then(technos => {
+
+                console.log('got technos from sync callback', technos);
+
+                const unsynced = technos.filter(techno => techno.unsynced);
+
+                console.log('pending sync', unsynced);
+
+                return Promise.all(unsynced.map(techno => {
+                    console.log('Attempting fetch', techno);
+                    fetch('https://nodetestapi-thyrrtzgdz.now.sh/technos', {
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        method: 'POST',
+                        body: JSON.stringify(techno)
+                    })
+                        .then(() => {
+                            console.log('Sent to server');
+                            console.log('id passé à putTechno', techno.id);
+                            return putTechno(Object.assign({}, techno, { unsynced: false }), techno.id);
+                        })
+                }))
+            })
+        )
+    }
+});

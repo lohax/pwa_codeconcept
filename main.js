@@ -20,8 +20,8 @@ function loadTechnologies() {
             response.json()
                 .then(technos => {
                     const allTechnos = technos.map(t => `<div><b>${t.name}</b> ${t.description}  <a href="${t.url}">site de ${t.name}</a> </div>`)
-                            .join('');
-            
+                        .join('');
+
                     technosDiv.innerHTML = allTechnos;
                     return; //important pour probleme firefox de cross origin
                 });
@@ -31,9 +31,46 @@ function loadTechnologies() {
 
 loadTechnologies();
 
-if(navigator.serviceWorker) {
+if (navigator.serviceWorker) {
     navigator.serviceWorker.register('sw.js')
-    .catch(err => console.log(err))
+        .catch(err => console.log(err))
+        .then(registration => {
+
+            // dans une app réelle, on ferait un fetch('http://localhost/getkey') vers un server node pa ex.
+            // pour aller a l'essentiel, on copie colle dans une const de main.js
+
+            // publique vapid key generated with web-push
+            const publicKey = 'BP4v7-w9QERh3-H0-WJXyyK2J5IktWXuiD8DPunV9v0yu3hnC5LiMD0g2wCxGLjCfZzlT4Z_T_Aaq_LifVBZhHk';
+
+            registration.pushManager.getSubscription().then(subscription => {
+                if (subscription) {
+                    console.log('subscription', subscription)
+                    extractKeysFromArrayBuffer(subscription)
+                    return subscription;
+                } else {
+                    // ask for subscription
+                    const convertedKey = urlBase64ToUint8Array(publicKey);
+                    return registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: convertedKey
+                    }).then(newSubscription => {
+                        extractKeysFromArrayBuffer(subscription)
+                        return subscription;
+                    })
+                }
+            })
+
+        })
+}
+
+function extractKeysFromArrayBuffer(subscription) {
+    // no more keys proprety directly visible on the subscription objet. So you have to use getKey()
+    const keyArrayBuffer = subscription.getKey('p256dh');
+    const authArrayBuffer = subscription.getKey('auth');
+    const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(keyArrayBuffer)));
+    const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(authArrayBuffer)));
+    console.log('p256dh key', keyArrayBuffer, p256dh);
+    console.log('auth key', authArrayBuffer, auth);
 }
 
 // if(window.caches){
@@ -49,3 +86,37 @@ if(navigator.serviceWorker) {
 //     //     ])
 //     // })
 // }
+
+// non persistent notification
+// if(window.Notification && window.Notification !== 'denied'){
+//     Notification.requestPermission(perm => { //demande de permission
+//         if(perm === 'granted') { // si ok
+//             const options = {
+//                 body: 'Je suis le body',
+//                 icon: 'images/icons/icon-72x72.png'
+//             }
+//             const notif = new Notification('Hello notification', options)
+//         } else {
+//             console.log('Autorisation  notif nok')
+//         }
+//     })
+// }
+
+// https://github.com/web-push-libs/web-push -- Using VAPID Key for applicationServerKey
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+
+

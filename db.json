@@ -25,10 +25,16 @@
       "url": "https://developer.mozilla.org/en-US/Apps/Progressive"
     },
     {
-      "name": "Meteor",
-      "description": "Fullstack Javascript",
-      "url": "https://www.meteor.com",
+      "name": "React",
+      "description": "Concurrent d'Angular",
+      "url": "https://reactjs.org/",
       "id": 5
+    },
+    {
+      "name": "Meteor",
+      "description": "full stack JS",
+      "url": "https://www.meteor.com/",
+      "id": 6
     }
   ]
 }
