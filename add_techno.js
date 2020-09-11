@@ -14,7 +14,7 @@ addTechnoForm.addEventListener('submit', evt => {
         unsynced: true,
     }
 
-    fetch('https://nodetestapi-thyrrtzgdz.now.sh/technos', {
+    fetch('http://localhost:3001/technos', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

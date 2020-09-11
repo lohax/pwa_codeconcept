@@ -161,7 +161,7 @@ self.addEventListener('sync', event => {
 
                 return Promise.all(unsynced.map(techno => {
                     console.log('Attempting fetch', techno);
-                    fetch('https://nodetestapi-thyrrtzgdz.now.sh/technos', {
+                    fetch('http://localhost:3001/technos', {
                         headers: {
                             'Accept': 'application/json',
                             'Content-Type': 'application/json'
